@@ -1,0 +1,27 @@
+{
+    "name": "samovar/composer-plugin",
+    "type": "composer-plugin",
+    "description": "Composer plugin for php projects",
+    "authors": [
+        {
+            "name": "samovar",
+            "email": "prototype.denis@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.1.3",
+        "composer-plugin-api": "^1.1"
+    },
+    "require-dev": {
+        "composer/composer": "^1.0.2",
+        "friendsofphp/php-cs-fixer": "^2.15"
+    },
+    "autoload": {
+        "psr-4": {
+            "Samovar\\Composer\\": "src"
+        }
+    },
+    "extra": {
+        "class": "Samovar\\Composer\\Plugin"
+    }
+}
