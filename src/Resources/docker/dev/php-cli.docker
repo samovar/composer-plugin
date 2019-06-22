@@ -1,0 +1,23 @@
+FROM php:7.3-cli
+
+RUN echo "Europe/Moscow" > /etc/timezone
+
+RUN apt-get update \
+    && apt-get install -y \
+    zip \
+    zsh \
+    git \
+    vim
+
+RUN docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+    && docker-php-ext-install pdo_pgsql zip
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/bin --filename=composer --quiet
+
+ENV COMPOSER_ALLOW_SUPERUSER 1
+
+RUN curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh | zsh || true
+COPY .zshrc /root/.zshrc
+RUN chsh -s /bin/zsh
+
+WORKDIR /app
