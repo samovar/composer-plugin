@@ -1,5 +1,5 @@
 {
-    "name": "samovar/composer-plugin",
+    "name": "ddlzz/composer-plugin",
     "type": "composer-plugin",
     "description": "Composer plugin for php projects",
     "authors": [
