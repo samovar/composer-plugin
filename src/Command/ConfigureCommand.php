@@ -57,6 +57,10 @@ class ConfigureCommand extends BaseCommand
             \copy($resourceDir.DIRECTORY_SEPARATOR.'.editorconfig', $rootDir.DIRECTORY_SEPARATOR.'.editorconfig');
         }
 
+        $copyPhpCsDist = static function () use ($resourceDir, $rootDir): void {
+            \copy($resourceDir.DIRECTORY_SEPARATOR.'.php_cs.dist', $rootDir.DIRECTORY_SEPARATOR.'.php_cs.dist');
+        };
+
         // PHP Code Standard Fixer
         if (!\array_key_exists('friendsofphp/php-cs-fixer', $requires)) {
             $requireCommand->run(new ArrayInput([
@@ -64,9 +68,7 @@ class ConfigureCommand extends BaseCommand
                 '--dev' => true,
             ]), $output);
 
-            if (!\file_exists($rootDir.DIRECTORY_SEPARATOR.'.php_cs.dist')) {
-                \copy($resourceDir.DIRECTORY_SEPARATOR.'.php_cs.dist', $rootDir.DIRECTORY_SEPARATOR.'.php_cs.dist');
-            }
+            $copyPhpCsDist();
 
             if (!$flexInstalled && \file_exists($gitignore) && $this->getIO()->askConfirmation('Update .gitignore [Y/n]?')) {
                 \file_put_contents($gitignore, \implode(PHP_EOL, [
@@ -76,6 +78,9 @@ class ConfigureCommand extends BaseCommand
                     '',
                 ]), FILE_APPEND);
             }
+        } elseif (!\file_exists($rootDir.DIRECTORY_SEPARATOR.'.php_cs.dist')) {
+            // If required, but no configured
+            $copyPhpCsDist();
         }
 
         // Security advisories
