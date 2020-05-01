@@ -1,0 +1,5 @@
+FROM php:7.3-fpm
+
+RUN echo "Europe/Moscow" > /etc/timezone
+
+WORKDIR /app

@@ -80,5 +80,46 @@ class ConfigureCommand extends BaseCommand
 
             $filesystem->copy($originFile, $targetFile, true);
         }
+
+        // Docker config
+        if ($this->getIO()->askConfirmation('Add the default docker config? [Y/n]?')) {
+            $projectName = $this->getIO()->ask('Please set the default project name for the docker config (e.g. "myproject")');
+            $dockerPort = $this->getIO()->ask('Please specify the docker port (random 48XXX would be used by default)', (string) \random_int(48000, 48999));
+            $dockerResourceDir = \sprintf('%s%sdocker', $resourceDir, DIRECTORY_SEPARATOR);
+            $dockerRootDir = \sprintf('%s%sdocker', $rootDir, DIRECTORY_SEPARATOR);
+            if (!\file_exists($dockerRootDir)) {
+                // recursive copy
+                \shell_exec(\sprintf('cp -r %s %s', $dockerResourceDir, $dockerRootDir));
+
+                if (null !== $projectName) {
+                    // replace the default project name in the docker config
+                    \shell_exec(\sprintf('find %s/dev -name \'*.*\' -type f -exec sed -i \'s/defaultProjectName/%s/\' {} ;', $dockerRootDir, $projectName));
+                }
+            }
+
+            if (!\file_exists($dockerComposeRootFile = $rootDir.DIRECTORY_SEPARATOR.'.docker-compose.yaml')) {
+                \copy($resourceDir.DIRECTORY_SEPARATOR.'.docker-compose.yaml', $dockerComposeRootFile);
+
+                if (null !== $projectName) {
+                    // replace the default project name in the docker config
+                    $dockerComposeContents = \str_replace('defaultProjectName', $projectName, \file_get_contents($dockerComposeRootFile));
+                    \file_put_contents($dockerComposeRootFile, $dockerComposeContents);
+                }
+
+                // set the docker port
+                $dockerComposeContents = \str_replace('replacePortWithRandomNum', $dockerPort, \file_get_contents($dockerComposeRootFile));
+                \file_put_contents($dockerComposeRootFile, $dockerComposeContents);
+            }
+
+            if (!\file_exists($makefileRootFile = $rootDir.DIRECTORY_SEPARATOR.'.Makefile')) {
+                \copy($resourceDir.DIRECTORY_SEPARATOR.'.Makefile', $makefileRootFile);
+
+                if (null !== $projectName) {
+                    // replace the default project name in Makefile
+                    $makefileContents = \str_replace('defaultProjectName', $projectName, \file_get_contents($makefileRootFile));
+                    \file_put_contents($makefileRootFile, $makefileContents);
+                }
+            }
+        }
     }
 }
