@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Samovar\Composer\Command;
 
 use Composer\Command\BaseCommand;
+use Composer\Composer;
+use Composer\Console\Application;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 
 class ConfigureCommand extends BaseCommand
 {
@@ -16,90 +21,64 @@ class ConfigureCommand extends BaseCommand
         $this
             ->setName('samovar:configure')
             ->setAliases(['configure'])
+            ->addOption('no-backup', null, InputOption::VALUE_NONE)
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): void
     {
-        $extra = $this->getComposer()->getPackage()->getExtra();
+        /** @var Composer $composer */
+        $composer = $this->getComposer();
+
+        /** @var Application $application */
+        $application = $this->getApplication();
+
+        $rootPackage = $composer->getPackage();
+
+        $extra = $rootPackage->getExtra();
+
+        $filesystem = new Filesystem();
+
         $rootDir = \realpath($extra['symfony']['root-dir'] ?? '.');
-        $resourceDir = \dirname(__DIR__).DIRECTORY_SEPARATOR.'Resources'.DIRECTORY_SEPARATOR;
-        $gitignore = $rootDir.DIRECTORY_SEPARATOR.'.gitignore';
 
-        $requires = $this->getComposer()->getPackage()->getDevRequires();
-        $requireCommand = $this->getApplication()->find('require');
-        $removeCommand = $this->getApplication()->find('remove');
-        $flexInstalled = \class_exists('Symfony\Flex\Flex');
+        $resourceDir = \dirname(__DIR__).DIRECTORY_SEPARATOR.'Resources';
 
-        // Idea
-        if (\file_exists($gitignore)) {
-            $lines = \file($gitignore, FILE_SKIP_EMPTY_LINES);
+        $requireCommand = $application->find('require');
 
-            $ideaIgnored = false;
-            foreach ($lines as $line) {
-                if (false !== \strpos($line, '/.idea'.PHP_EOL) || false !== \strpos($line, '.idea'.PHP_EOL)) {
-                    $ideaIgnored = true;
-                    break;
-                }
+        $requireCommand->run(new ArrayInput([
+            'packages' => [
+                'roave/security-advisories:dev-master',
+                'friendsofphp/php-cs-fixer',
+                'liip/test-fixtures-bundle',
+                'phpstan/extension-installer',
+                'phpstan/phpstan',
+                'phpstan/phpstan-doctrine',
+                'phpstan/phpstan-phpunit',
+                'phpstan/phpstan-symfony',
+            ],
+            '--dev' => true,
+        ]), $output);
+
+        $finder = new Finder();
+        $finder
+            ->in($resourceDir)
+            ->ignoreVCS(true)
+            ->ignoreDotFiles(false)
+            ->files()
+        ;
+
+        $backup = !$input->getOption('no-backup');
+
+        foreach ($finder as $file) {
+            $filename = $file->getRelativePathname();
+            $originFile = $resourceDir.DIRECTORY_SEPARATOR.$filename;
+            $targetFile = $rootDir.DIRECTORY_SEPARATOR.$filename;
+
+            if ($backup && $filesystem->exists($targetFile)) {
+                $filesystem->copy($targetFile, $targetFile.'.back', true);
             }
 
-            if (!$ideaIgnored && $this->getIO()->askConfirmation('Add ".idea" to .gitignore? [Y/n]?')) {
-                \file_put_contents($gitignore, \implode(PHP_EOL, [
-                    '',
-                    '.idea',
-                    '',
-                ]), FILE_APPEND);
-            }
-        }
-
-        // Editorconfig
-        if (!\file_exists($rootDir.DIRECTORY_SEPARATOR.'.editorconfig')) {
-            \copy($resourceDir.DIRECTORY_SEPARATOR.'.editorconfig', $rootDir.DIRECTORY_SEPARATOR.'.editorconfig');
-        }
-
-        $copyPhpCsDist = static function () use ($resourceDir, $rootDir): void {
-            \copy($resourceDir.DIRECTORY_SEPARATOR.'.php_cs.dist', $rootDir.DIRECTORY_SEPARATOR.'.php_cs.dist');
-        };
-
-        // PHP Code Standard Fixer
-        if (!\array_key_exists('friendsofphp/php-cs-fixer', $requires)) {
-            $requireCommand->run(new ArrayInput([
-                'packages' => ['friendsofphp/php-cs-fixer'],
-                '--dev' => true,
-            ]), $output);
-
-            $copyPhpCsDist();
-
-            if (!$flexInstalled && \file_exists($gitignore) && $this->getIO()->askConfirmation('Update .gitignore [Y/n]?')) {
-                \file_put_contents($gitignore, \implode(PHP_EOL, [
-                    '',
-                    '.php_cs',
-                    '.php_cs.cache',
-                    '',
-                ]), FILE_APPEND);
-            }
-        } elseif (!\file_exists($rootDir.DIRECTORY_SEPARATOR.'.php_cs.dist')) {
-            // If required, but no configured
-            $copyPhpCsDist();
-        }
-
-        // Security advisories
-        if (!\array_key_exists('roave/security-advisories', $requires)) {
-            $requireCommand->run(new ArrayInput([
-                'packages' => ['roave/security-advisories:dev-master'],
-                '--dev' => true,
-            ]), $output);
-        }
-
-        //  Symfony phpunit bridge
-        if (!\array_key_exists('symfony/phpunit-bridge', $requires)) {
-            $removeCommand->run(new ArrayInput([
-                'packages' => ['phpunit/phpunit'],
-            ]), $output);
-            $requireCommand->run(new ArrayInput([
-                'packages' => ['symfony/phpunit-bridge'],
-                '--dev' => true,
-            ]), $output);
+            $filesystem->copy($originFile, $targetFile, true);
         }
     }
 }

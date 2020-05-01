@@ -1,0 +1,19 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+
+    # Syfmony phpunit bridge
+    autoload_files:
+        - bin/.phpunit/phpunit-7.5-0/vendor/autoload.php
+    excludes_analyse:
+        - src/Migrations/*
+        - tests/bootstrap.php
+
+    symfony:
+        container_xml_path: '%rootDir%/../../../var/cache/dev/App_KernelDevDebugContainer.xml'
+        console_application_loader: tests/console-application.php
+
+    doctrine:
+        objectManagerLoader: tests/object-manager.php
