@@ -2,6 +2,7 @@
     "name": "samovar/composer-plugin",
     "type": "composer-plugin",
     "description": "Composer plugin for php projects",
+    "license": "MIT",
     "authors": [
         {
             "name": "samovar",
