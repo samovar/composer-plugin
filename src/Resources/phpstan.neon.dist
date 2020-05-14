@@ -5,6 +5,7 @@ parameters:
         - tests
 
     checkGenericClassInNonGenericObjectType: false
+    checkMissingIterableValueType: false
 
     # Syfmony phpunit bridge
     autoload_files:
