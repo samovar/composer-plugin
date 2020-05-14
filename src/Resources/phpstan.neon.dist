@@ -4,6 +4,8 @@ parameters:
         - src
         - tests
 
+    checkGenericClassInNonGenericObjectType: false
+
     # Syfmony phpunit bridge
     autoload_files:
         - bin/.phpunit/phpunit-7.5-0/vendor/autoload.php
